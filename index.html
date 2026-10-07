@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Durée de vie</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2f6f5e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Durée de vie">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#76736b;--line:#e6e3dc;--acc:#2f6f5e;--accbg:#e1efe9;--warn:#b45309;--warnbg:#fdf0dc;--bad:#b3261e;--badbg:#fbe4e2}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151514;--card:#1f1f1d;--tx:#efede7;--mut:#9c988e;--line:#33322e;--acc:#6fc4a8;--accbg:#1d3029;--warn:#f0b15a;--warnbg:#3a2e17;--bad:#f1948e;--badbg:#3b1f1d}}
+:root[data-theme="dark"]{--bg:#151514;--card:#1f1f1d;--tx:#efede7;--mut:#9c988e;--line:#33322e;--acc:#6fc4a8;--accbg:#1d3029;--warn:#f0b15a;--warnbg:#3a2e17;--bad:#f1948e;--badbg:#3b1f1d}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:90px}
+.wrap{max-width:640px;margin:0 auto;padding:14px}
+h1{font-size:22px;margin:4px 0 12px;display:flex;justify-content:space-between;align-items:center}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:20px 0 8px}
+.sync{font-size:11px;font-weight:500;color:var(--mut)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.kpi b{display:block;font-size:20px}.kpi span{font-size:12px;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px;cursor:pointer}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.name{font-weight:600}.sub{font-size:12.5px;color:var(--mut)}
+.bar{height:6px;border-radius:3px;background:var(--line);margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc)}
+.bar i.w{background:var(--warn)}.bar i.b{background:var(--bad)}
+.tag{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:99px;background:var(--accbg);color:var(--acc);margin:6px 4px 0 0}
+.tag.w{background:var(--warnbg);color:var(--warn)}.tag.b{background:var(--badbg);color:var(--bad)}.tag.m{background:var(--line);color:var(--mut)}
+.tools{display:flex;gap:8px;margin:12px 0}
+input,select,textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:42px}
+textarea{min-height:64px}
+label{display:block;font-size:12.5px;color:var(--mut);margin:10px 0 4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--line);color:var(--tx);cursor:pointer;min-height:42px}
+button.p{background:var(--acc);color:#fff}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) button.p{color:#10211b}}
+button.d{background:var(--badbg);color:var(--bad)}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;font-size:28px;padding:0;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:5}
+#sheet.on{display:flex}
+.panel{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.acts{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}.acts button{flex:1}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:12px;font-size:13.5px}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Durée de vie <span class="sync" id="sync"></span></h1>
+<div class="grid" id="kpis"></div>
+<div id="watch"></div>
+<h2>Mes objets</h2>
+<input id="q" type="search" placeholder="Rechercher (nom, marque, magasin…)">
+<div class="tools">
+<select id="fc"></select>
+<select id="fs"><option value="actif">En service</option><option value="all">Tous</option><option value="hs">Hors service</option></select>
+<select id="so"><option value="recent">Récents</option><option value="cher">Plus chers</option><option value="mois">Coût/mois</option><option value="reste">Fin de vie proche</option></select>
+</div>
+<div id="list"></div>
+<h2>Données</h2>
+<div class="acts"><button id="csv">Export CSV</button><button id="jsn">Sauvegarde JSON</button><button id="imp">Importer JSON</button></div>
+<input id="file" type="file" accept=".json,application/json" hidden>
+</div>
+<button class="fab p" id="add" aria-label="Ajouter">+</button>
+<div id="sheet"><div class="panel" id="panel"></div></div>
+
+<script>
+const CATS={"Électronique":["📱",4],"Électroménager":["🔌",8],"Vêtements":["👕",3],"Chaussures":["👟",3],"Sport":["🏋️",5],"Outils":["🔧",10],"Mobilier":["🛋️",10],"Vélo / véhicule":["🚲",8],"Autre":["📦",5]};
+const ST={actif:"En service",hs:"Hors service",vendu:"Revendu / donné"};
+let items=[],ref=null,persist="local";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+const D=s=>new Date(s+"T12:00:00");
+const days=(a,b)=>Math.round((D(b)-D(a))/864e5);
+const eur=n=>(n||0).toLocaleString("fr-FR",{maximumFractionDigits:n<10?2:0})+" €";
+const addM=(s,m)=>{const d=D(s);d.setMonth(d.getMonth()+m);return d.toISOString().slice(0,10)};
+const dur=d=>d<60?d+" j":d<730?Math.round(d/30.44)+" mois":(d/365.25).toFixed(1).replace(".",",")+" ans";
+
+function calc(it){
+ const act=it.status==="actif",end=act?today():(it.endDate||today());
+ const age=Math.max(1,days(it.date,end)),price=+it.price||0;
+ const r={act,age,price,perMonth:price/(age/30.44),perDay:price/age};
+ if(+it.life>0){r.total=Math.round(it.life*365.25);r.pct=age/r.total;r.left=r.total-age}
+ if(+it.warranty>0){r.wEnd=addM(it.date,+it.warranty);r.wLeft=days(today(),r.wEnd)}
+ return r;
+}
+function save(){
+ try{localStorage.setItem("dv_items",JSON.stringify(items))}catch(e){}
+ }
+function setSync(t){$("#sync").textContent=t}
+
+function render(){
+ const act=items.filter(i=>i.status==="actif"),cs=act.map(calc);
+ const spent=items.reduce((s,i)=>s+(+i.price||0),0);
+ const pm=cs.reduce((s,c)=>s+c.perMonth,0);
+ $("#kpis").innerHTML=`<div class="kpi"><b>${act.length}</b><span>objets en service</span></div><div class="kpi"><b>${eur(spent)}</b><span>dépensé au total</span></div><div class="kpi"><b>${eur(pm)}</b><span>coût / mois (en service)</span></div><div class="kpi"><b>${avgLife()}</b><span>durée de vie réelle moyenne</span></div>`;
+ const w=[];
+ act.forEach(i=>{const c=calc(i);
+  if(c.wLeft!==undefined&&c.wLeft>=0&&c.wLeft<=60)w.push([c.wLeft,`🛡️ <b>${esc(i.name)}</b> : garantie finit dans ${c.wLeft} j`]);
+  if(c.left!==undefined&&c.pct>=.85)w.push([c.left,`⏳ <b>${esc(i.name)}</b> : ${c.left>0?"fin de vie estimée dans "+dur(c.left):"durée de vie dépassée"}`])});
+ w.sort((a,b)=>a[0]-b[0]);
+ $("#watch").innerHTML=w.length?`<h2>À surveiller</h2>`+w.slice(0,6).map(x=>`<div class="stat" style="margin-top:6px">${x[1]}</div>`).join(""):"";
+ const q=$("#q").value.toLowerCase(),fc=$("#fc").value,fs=$("#fs").value;
+ let l=items.filter(i=>(fc==="all"||i.cat===fc)&&(fs==="all"||(fs==="actif"?i.status==="actif":i.status!=="actif"))&&(!q||[i.name,i.brand,i.store,i.notes].join(" ").toLowerCase().includes(q)));
+ const so=$("#so").value;
+ l.sort((a,b)=>{const x=calc(a),y=calc(b);
+  if(so==="cher")return y.price-x.price;if(so==="mois")return y.perMonth-x.perMonth;
+  if(so==="reste")return (x.pct??-1)<(y.pct??-1)?1:-1;return b.date.localeCompare(a.date)});
+ $("#list").innerHTML=l.length?l.map(card).join(""):`<div class="empty">${items.length?"Aucun résultat":"Aucun objet pour l'instant.<br>Appuie sur + pour ajouter ton premier achat."}</div>`;
+ document.querySelectorAll(".card").forEach(e=>e.onclick=()=>edit(e.dataset.id));
+}
+function avgLife(){
+ const d=items.filter(i=>i.status!=="actif"&&i.endDate).map(i=>days(i.date,i.endDate));
+ return d.length?dur(d.reduce((a,b)=>a+b,0)/d.length):"–";
+}
+function card(i){
+ const c=calc(i),e=(CATS[i.cat]||["📦"])[0];
+ const cls=c.pct>=1?"b":c.pct>=.85?"w":"";
+ let t=`<span class="tag m">${i.status==="actif"?dur(c.age):ST[i.status]+" · "+dur(c.age)}</span>`;
+ if(c.price)t+=`<span class="tag">${eur(c.perMonth)}/mois</span>`;
+ if(c.wLeft!==undefined&&c.act)t+=c.wLeft>=0?`<span class="tag ${c.wLeft<=60?"w":""}">Garantie ${c.wLeft<=60?c.wLeft+" j":"OK"}</span>`:`<span class="tag m">Garantie expirée</span>`;
+ return `<div class="card" data-id="${i.id}"><div class="row"><div><div class="name">${e} ${esc(i.name)}</div><div class="sub">${esc([i.brand,i.store,new Date(i.date).toLocaleDateString("fr-FR")].filter(Boolean).join(" · "))}</div></div><div class="name">${c.price?eur(c.price):""}</div></div>${t}${c.pct!==undefined&&c.act?`<div class="bar"><i class="${cls}" style="width:${Math.min(100,c.pct*100)}%"></i></div>`:""}</div>`;
+}
+function edit(id){
+ const n=!id,it=n?{id:"i"+Date.now(),name:"",cat:"Électronique",date:today(),price:"",life:4,warranty:24,status:"actif"}:items.find(x=>x.id===id);
+ const c=n?null:calc(it);
+ const f=(k,lab,type="text",extra="")=>`<label>${lab}</label><input id="f_${k}" type="${type}" value="${esc(it[k]??"")}" ${extra}>`;
+ $("#panel").innerHTML=`<h1>${n?"Nouvel achat":"Détails"}</h1>${f("name","Nom *","text",'placeholder="ex. Aspirateur Dyson V11"')}
+ <div class="two"><div><label>Catégorie</label><select id="f_cat">${Object.keys(CATS).map(k=>`<option ${k===it.cat?"selected":""}>${k}</option>`).join("")}</select></div><div>${f("price","Prix (€)","number",'step="0.01" inputmode="decimal"')}</div></div>
+ <div class="two"><div>${f("date","Date d'achat","date")}</div><div>${f("store","Magasin / site")}</div></div>
+ <div class="two"><div>${f("brand","Marque / modèle")}</div><div>${f("serial","N° de série")}</div></div>
+ <div class="two"><div>${f("life","Durée de vie visée (ans)","number",'step="0.5" inputmode="decimal"')}</div><div>${f("warranty","Garantie (mois)","number",'inputmode="numeric"')}</div></div>
+ <label>Statut</label><select id="f_status">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${k===it.status?"selected":""}>${v}</option>`).join("")}</select>
+ <div id="endw" style="display:${it.status==="actif"?"none":"block"}">${f("endDate","Date de fin d'usage","date")}</div>
+ <label>Notes (réparations, raison du remplacement…)</label><textarea id="f_notes">${esc(it.notes||"")}</textarea>
+ ${c?`<div class="stat">Âge : <b>${dur(c.age)}</b>${c.price?` · ${eur(c.perDay)}/jour · ${eur(c.perMonth)}/mois`:""}${c.total?`<br>Vie estimée : ${dur(c.total)} · ${c.left>0?"reste "+dur(c.left):"dépassée de "+dur(-c.left)}`:""}${c.wEnd?`<br>Garantie jusqu'au ${new Date(c.wEnd).toLocaleDateString("fr-FR")}`:""}</div>`:""}
+ <div class="acts"><button id="cancel">Annuler</button>${n?"":'<button class="d" id="del">Supprimer</button>'}<button class="p" id="ok">Enregistrer</button></div>`;
+ $("#sheet").classList.add("on");
+ const cat=$("#f_cat");
+ if(n)cat.onchange=()=>{$("#f_life").value=CATS[cat.value][1]};
+ $("#f_status").onchange=e=>{$("#endw").style.display=e.target.value==="actif"?"none":"block";if(e.target.value!=="actif"&&!$("#f_endDate").value)$("#f_endDate").value=today()};
+ $("#cancel").onclick=close;
+ if(!n)$("#del").onclick=()=>{if(confirm("Supprimer cet objet ?")){items=items.filter(x=>x.id!==id);save();close();render()}};
+ $("#ok").onclick=()=>{
+  const g=k=>$("#f_"+k)?.value.trim()??"";
+  if(!g("name")||!g("date")){alert("Nom et date d'achat requis");return}
+  Object.assign(it,{name:g("name"),cat:g("cat"),price:g("price"),date:g("date"),store:g("store"),brand:g("brand"),serial:g("serial"),life:g("life"),warranty:g("warranty"),status:g("status"),endDate:g("status")==="actif"?"":g("endDate"),notes:g("notes")});
+  if(n)items.push(it);save();close();render();
+ };
+}
+function close(){$("#sheet").classList.remove("on")}
+$("#sheet").onclick=e=>{if(e.target.id==="sheet")close()};
+$("#add").onclick=()=>edit();
+["q","fc","fs","so"].forEach(k=>$("#"+k).oninput=render);
+$("#fc").innerHTML='<option value="all">Toutes catégories</option>'+Object.keys(CATS).map(k=>`<option>${k}</option>`).join("");
+
+async function saveFile(name,data,mime){
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:mime}));a.download=name;a.click();
+}
+$("#csv").onclick=()=>{
+ const h=["Nom","Catégorie","Marque","Magasin","Date achat","Prix","Garantie (mois)","Durée de vie visée (ans)","Statut","Date fin","Âge (jours)","Coût/mois","Notes"];
+ const rows=items.map(i=>{const c=calc(i);return [i.name,i.cat,i.brand,i.store,i.date,i.price,i.warranty,i.life,ST[i.status],i.endDate,c.age,c.price?c.perMonth.toFixed(2):"",i.notes]});
+ const csv="\ufeff"+[h,...rows].map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\n");
+ saveFile("durée-de-vie.csv",csv,"text/csv");
+};
+$("#jsn").onclick=()=>saveFile("durée-de-vie.json",JSON.stringify(items,null,1),"application/json");
+$("#imp").onclick=()=>$("#file").click();
+$("#file").onchange=async e=>{
+ try{const a=JSON.parse(await e.target.files[0].text());
+  if(!Array.isArray(a))throw 0;
+  const ids=new Set(items.map(i=>i.id));a.forEach(i=>{if(i.name&&i.date&&!ids.has(i.id)){i.id=i.id||"i"+Math.random().toString(36).slice(2);items.push(i)}});
+  save();render()}catch(x){alert("Fichier invalide")}
+ e.target.value="";
+};
+
+try{items=JSON.parse(localStorage.getItem("dv_items")||"[]")}catch(e){}
+render();
+setSync("stocké sur cet appareil");
+if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+</script>
+</body>
+</html>
