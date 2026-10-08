@@ -50,6 +50,14 @@ button.d{background:var(--badbg);color:var(--bad)}
 .acts{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}.acts button{flex:1}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:12px;font-size:13.5px}
 .empty{text-align:center;color:var(--mut);padding:30px 10px}
+.ph{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.pt{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);aspect-ratio:1}
+.pt img{width:100%;height:100%;object-fit:cover;display:block}
+.pt span{position:absolute;left:4px;bottom:4px;font-size:10.5px;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;padding:1px 6px}
+.pt button{position:absolute;right:4px;top:4px;min-height:0;padding:2px 7px;border-radius:99px;background:rgba(0,0,0,.6);color:#fff}
+#viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:9}
+#viewer.on{display:flex}#viewer img{max-width:100%;max-height:100%}
+.th{width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none;margin-right:10px}
 </style>
 </head>
 <body>
@@ -65,6 +73,7 @@ button.d{background:var(--badbg);color:var(--bad)}
 <select id="so"><option value="recent">Récents</option><option value="cher">Plus chers</option><option value="mois">Coût/mois</option><option value="reste">Fin de vie proche</option></select>
 </div>
 <div id="list"></div>
+<h2>Mes catégories</h2><div id="catm"></div>
 <h2>Données</h2>
 <div class="acts"><button id="csv">Export CSV</button><button id="jsn">Sauvegarde JSON</button><button id="imp">Importer JSON</button></div>
 <input id="file" type="file" accept=".json,application/json" hidden>
@@ -72,8 +81,14 @@ button.d{background:var(--badbg);color:var(--bad)}
 <button class="fab p" id="add" aria-label="Ajouter">+</button>
 <div id="sheet"><div class="panel" id="panel"></div></div>
 
+<div id="viewer"></div>
 <script>
-const CATS={"Électronique":["📱",4],"Électroménager":["🔌",8],"Vêtements":["👕",3],"Chaussures":["👟",3],"Sport":["🏋️",5],"Outils":["🔧",10],"Mobilier":["🛋️",10],"Vélo / véhicule":["🚲",8],"Autre":["📦",5]};
+const BASE={"Électronique":["📱",4],"Électroménager":["🔌",8],"Vêtements":["👕",3],"Chaussures":["👟",3],"Sport":["🏋️",5],"Outils":["🔧",10],"Mobilier":["🛋️",10],"Vélo / véhicule":["🚲",8],"Autre":["📦",5]};
+let custom={};try{custom=JSON.parse(localStorage.getItem("dv_cats")||"{}")}catch(e){}
+let CATS={};
+function buildCats(){CATS=Object.assign({},BASE,custom)}
+buildCats();
+function saveCats(){try{localStorage.setItem("dv_cats",JSON.stringify(custom))}catch(e){}buildCats();fillFc()}
 const ST={actif:"En service",hs:"Hors service",vendu:"Revendu / donné"};
 let items=[],ref=null,persist="local";
 const $=s=>document.querySelector(s);
@@ -117,6 +132,8 @@ function render(){
   if(so==="reste")return (x.pct??-1)<(y.pct??-1)?1:-1;return b.date.localeCompare(a.date)});
  $("#list").innerHTML=l.length?l.map(card).join(""):`<div class="empty">${items.length?"Aucun résultat":"Aucun objet pour l'instant.<br>Appuie sur + pour ajouter ton premier achat."}</div>`;
  document.querySelectorAll(".card").forEach(e=>e.onclick=()=>edit(e.dataset.id));
+ document.querySelectorAll("img.th").forEach(async im=>{im.src=(await pdata(im.dataset.id))||""});
+ drawCats();
 }
 function avgLife(){
  const d=items.filter(i=>i.status!=="actif"&&i.endDate).map(i=>days(i.date,i.endDate));
@@ -124,60 +141,104 @@ function avgLife(){
 }
 function card(i){
  const c=calc(i),e=(CATS[i.cat]||["📦"])[0];
+ const pp=(i.photos||[]).find(p=>p.k==="Produit")||(i.photos||[])[0],th=pp?`<img class="th" data-id="${pp.id}" alt="">`:"";
  const cls=c.pct>=1?"b":c.pct>=.85?"w":"";
  let t=`<span class="tag m">${i.status==="actif"?dur(c.age):ST[i.status]+" · "+dur(c.age)}</span>`;
+ if((i.photos||[]).length)t+=`<span class="tag m">📷 ${i.photos.length}</span>`;
  if(c.price)t+=`<span class="tag">${eur(c.perMonth)}/mois</span>`;
  if(c.wLeft!==undefined&&c.act)t+=c.wLeft>=0?`<span class="tag ${c.wLeft<=60?"w":""}">Garantie ${c.wLeft<=60?c.wLeft+" j":"OK"}</span>`:`<span class="tag m">Garantie expirée</span>`;
- return `<div class="card" data-id="${i.id}"><div class="row"><div><div class="name">${e} ${esc(i.name)}</div><div class="sub">${esc([i.brand,i.store,new Date(i.date).toLocaleDateString("fr-FR")].filter(Boolean).join(" · "))}</div></div><div class="name">${c.price?eur(c.price):""}</div></div>${t}${c.pct!==undefined&&c.act?`<div class="bar"><i class="${cls}" style="width:${Math.min(100,c.pct*100)}%"></i></div>`:""}</div>`;
+ return `<div class="card" data-id="${i.id}"><div class="row">${th}<div style="flex:1"><div class="name">${e} ${esc(i.name)}</div><div class="sub">${esc([i.brand,i.store,new Date(i.date).toLocaleDateString("fr-FR")].filter(Boolean).join(" · "))}</div></div><div class="name">${c.price?eur(c.price):""}</div></div>${t}${c.pct!==undefined&&c.act?`<div class="bar"><i class="${cls}" style="width:${Math.min(100,c.pct*100)}%"></i></div>`:""}</div>`;
 }
 function edit(id){
  const n=!id,it=n?{id:"i"+Date.now(),name:"",cat:"Électronique",date:today(),price:"",life:4,warranty:24,status:"actif"}:items.find(x=>x.id===id);
  const c=n?null:calc(it);
  const f=(k,lab,type="text",extra="")=>`<label>${lab}</label><input id="f_${k}" type="${type}" value="${esc(it[k]??"")}" ${extra}>`;
  $("#panel").innerHTML=`<h1>${n?"Nouvel achat":"Détails"}</h1>${f("name","Nom *","text",'placeholder="ex. Aspirateur Dyson V11"')}
- <div class="two"><div><label>Catégorie</label><select id="f_cat">${Object.keys(CATS).map(k=>`<option ${k===it.cat?"selected":""}>${k}</option>`).join("")}</select></div><div>${f("price","Prix (€)","number",'step="0.01" inputmode="decimal"')}</div></div>
+ <div class="two"><div><label>Catégorie</label><select id="f_cat">${Object.keys(CATS).map(k=>`<option ${k===it.cat?"selected":""}>${esc(k)}</option>`).join("")}<option value="__new">＋ Nouvelle catégorie…</option></select></div><div>${f("price","Prix (€)","number",'step="0.01" inputmode="decimal"')}</div></div>
  <div class="two"><div>${f("date","Date d'achat","date")}</div><div>${f("store","Magasin / site")}</div></div>
  <div class="two"><div>${f("brand","Marque / modèle")}</div><div>${f("serial","N° de série")}</div></div>
  <div class="two"><div>${f("life","Durée de vie visée (ans)","number",'step="0.5" inputmode="decimal"')}</div><div>${f("warranty","Garantie (mois)","number",'inputmode="numeric"')}</div></div>
  <label>Statut</label><select id="f_status">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${k===it.status?"selected":""}>${v}</option>`).join("")}</select>
  <div id="endw" style="display:${it.status==="actif"?"none":"block"}">${f("endDate","Date de fin d'usage","date")}</div>
+ <label>Photos (ticket, produit…)</label><div class="two"><select id="f_pk"><option>Produit</option><option>Ticket</option><option>Garantie</option><option>Autre</option></select><button type="button" id="padd">📷 Ajouter</button></div><input id="pfile" type="file" accept="image/*" multiple hidden><div class="ph" id="ph"></div>
  <label>Notes (réparations, raison du remplacement…)</label><textarea id="f_notes">${esc(it.notes||"")}</textarea>
  ${c?`<div class="stat">Âge : <b>${dur(c.age)}</b>${c.price?` · ${eur(c.perDay)}/jour · ${eur(c.perMonth)}/mois`:""}${c.total?`<br>Vie estimée : ${dur(c.total)} · ${c.left>0?"reste "+dur(c.left):"dépassée de "+dur(-c.left)}`:""}${c.wEnd?`<br>Garantie jusqu'au ${new Date(c.wEnd).toLocaleDateString("fr-FR")}`:""}</div>`:""}
  <div class="acts"><button id="cancel">Annuler</button>${n?"":'<button class="d" id="del">Supprimer</button>'}<button class="p" id="ok">Enregistrer</button></div>`;
  $("#sheet").classList.add("on");
  const cat=$("#f_cat");
- if(n)cat.onchange=()=>{$("#f_life").value=CATS[cat.value][1]};
+
+ let prev=cat.value;
+ cat.onchange=()=>{
+  if(cat.value==="__new"){const r=newCat();if(r){if(![...cat.options].some(o=>o.value===r))cat.insertBefore(new Option(r,r),cat.querySelector('[value="__new"]'));cat.value=r}else cat.value=prev}
+  prev=cat.value;if(n&&CATS[cat.value])$("#f_life").value=CATS[cat.value][1];
+ };
+ const P={list:[...(it.photos||[])],added:[],removed:[]};curP=P;drawPhotos();
+ $("#padd").onclick=()=>$("#pfile").click();
+ $("#pfile").onchange=async e=>{for(const f of e.target.files){try{const id="p"+Date.now()+Math.random().toString(36).slice(2,6),d=await shrink(f);await pput(id,d);cache.set(id,d);P.list.push({id,k:$("#f_pk").value});P.added.push(id)}catch(x){alert("Photo illisible ou stockage plein")}}e.target.value="";drawPhotos()};
  $("#f_status").onchange=e=>{$("#endw").style.display=e.target.value==="actif"?"none":"block";if(e.target.value!=="actif"&&!$("#f_endDate").value)$("#f_endDate").value=today()};
  $("#cancel").onclick=close;
- if(!n)$("#del").onclick=()=>{if(confirm("Supprimer cet objet ?")){items=items.filter(x=>x.id!==id);save();close();render()}};
+ if(!n)$("#del").onclick=()=>{if(confirm("Supprimer cet objet ?")){(it.photos||[]).forEach(p=>pdel(p.id));items=items.filter(x=>x.id!==id);save();close();render()}};
  $("#ok").onclick=()=>{
   const g=k=>$("#f_"+k)?.value.trim()??"";
   if(!g("name")||!g("date")){alert("Nom et date d'achat requis");return}
-  Object.assign(it,{name:g("name"),cat:g("cat"),price:g("price"),date:g("date"),store:g("store"),brand:g("brand"),serial:g("serial"),life:g("life"),warranty:g("warranty"),status:g("status"),endDate:g("status")==="actif"?"":g("endDate"),notes:g("notes")});
-  if(n)items.push(it);save();close();render();
+  Object.assign(it,{name:g("name"),cat:g("cat"),price:g("price"),date:g("date"),store:g("store"),brand:g("brand"),serial:g("serial"),life:g("life"),warranty:g("warranty"),status:g("status"),endDate:g("status")==="actif"?"":g("endDate"),notes:g("notes"),photos:P.list});
+  if(n)items.push(it);P.removed.forEach(pdel);curP=null;save();close();render();
  };
 }
-function close(){$("#sheet").classList.remove("on")}
+function close(){if(curP){curP.added.forEach(pdel);curP=null}$("#sheet").classList.remove("on")}
 $("#sheet").onclick=e=>{if(e.target.id==="sheet")close()};
 $("#add").onclick=()=>edit();
 ["q","fc","fs","so"].forEach(k=>$("#"+k).oninput=render);
-$("#fc").innerHTML='<option value="all">Toutes catégories</option>'+Object.keys(CATS).map(k=>`<option>${k}</option>`).join("");
+function fillFc(){const v=$("#fc").value||"all";$("#fc").innerHTML='<option value="all">Toutes catégories</option>'+Object.keys(CATS).map(k=>`<option>${esc(k)}</option>`).join("");$("#fc").value=Object.keys(CATS).includes(v)?v:"all"}
+fillFc();
 
+let curP=null;const cache=new Map();
+let _db;
+function idb(){return _db||(_db=new Promise((res,rej)=>{const r=indexedDB.open("dv",1);r.onupgradeneeded=()=>r.result.createObjectStore("p");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))}
+async function pput(id,v){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction("p","readwrite");t.objectStore("p").put(v,id);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+async function pget(id){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction("p").objectStore("p").get(id);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function pdel(id){cache.delete(id);try{const d=await idb();d.transaction("p","readwrite").objectStore("p").delete(id)}catch(e){}}
+async function pdata(id){if(!cache.has(id))cache.set(id,await pget(id));return cache.get(id)}
+function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const s=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL("image/jpeg",.8))};im.onerror=rej;im.src=u})}
+function drawPhotos(){
+ const h=$("#ph");if(!h||!curP)return;
+ h.innerHTML=curP.list.map(p=>`<div class="pt"><img data-id="${p.id}" alt=""><span>${esc(p.k)}</span><button type="button" data-rm="${p.id}">✕</button></div>`).join("");
+ h.querySelectorAll("img").forEach(async im=>{im.src=(await pdata(im.dataset.id))||"";im.onclick=()=>view(im.src)});
+ h.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{const id=b.dataset.rm;curP.list=curP.list.filter(p=>p.id!==id);if(curP.added.includes(id)){curP.added=curP.added.filter(x=>x!==id);pdel(id)}else curP.removed.push(id);drawPhotos()});
+}
+function view(src){if(!src)return;$("#viewer").innerHTML=`<img src="${src}" alt="">`;$("#viewer").classList.add("on")}
+$("#viewer").onclick=()=>$("#viewer").classList.remove("on");
+function newCat(){
+ const t=(prompt("Nom de la nouvelle catégorie (tu peux commencer par un emoji, ex. 🎮 Jeux vidéo)")||"").trim();
+ if(!t)return null;
+ const m=t.match(/^(\p{Extended_Pictographic}\uFE0F?)\s*(.+)$/u),emo=m?m[1]:"🏷️",name=(m?m[2]:t).trim();
+ if(CATS[name])return name;
+ const y=parseFloat((prompt("Durée de vie habituelle en années ?","5")||"5").replace(",","."));
+ custom[name]=[emo,y>0?y:5];saveCats();return name;
+}
+function drawCats(){
+ const c=Object.entries(custom);
+ $("#catm").innerHTML=(c.length?c.map(([k,v])=>`<span class="tag">${v[0]} ${esc(k)} <a data-dc="${esc(k)}" style="cursor:pointer">✕</a></span>`).join(""):'<span class="sub">Aucune catégorie personnalisée.</span>')+'<div class="acts"><button id="nc">＋ Nouvelle catégorie</button></div>';
+ $("#nc").onclick=()=>{if(newCat())render()};
+ $("#catm").querySelectorAll("[data-dc]").forEach(a=>a.onclick=()=>{const k=a.dataset.dc;if(items.some(i=>i.cat===k)){alert("Des objets utilisent cette catégorie : change-les d'abord.");return}if(confirm("Supprimer la catégorie « "+k+" » ?")){delete custom[k];saveCats();render()}});
+}
 async function saveFile(name,data,mime){
  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:mime}));a.download=name;a.click();
 }
 $("#csv").onclick=()=>{
- const h=["Nom","Catégorie","Marque","Magasin","Date achat","Prix","Garantie (mois)","Durée de vie visée (ans)","Statut","Date fin","Âge (jours)","Coût/mois","Notes"];
- const rows=items.map(i=>{const c=calc(i);return [i.name,i.cat,i.brand,i.store,i.date,i.price,i.warranty,i.life,ST[i.status],i.endDate,c.age,c.price?c.perMonth.toFixed(2):"",i.notes]});
+ const h=["Nom","Catégorie","Marque","Magasin","Date achat","Prix","Garantie (mois)","Durée de vie visée (ans)","Statut","Date fin","Âge (jours)","Coût/mois","Notes","Photos"];
+ const rows=items.map(i=>{const c=calc(i);return [i.name,i.cat,i.brand,i.store,i.date,i.price,i.warranty,i.life,ST[i.status],i.endDate,c.age,c.price?c.perMonth.toFixed(2):"",i.notes,(i.photos||[]).length]});
  const csv="\ufeff"+[h,...rows].map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\n");
  saveFile("durée-de-vie.csv",csv,"text/csv");
 };
-$("#jsn").onclick=()=>saveFile("durée-de-vie.json",JSON.stringify(items,null,1),"application/json");
+$("#jsn").onclick=async()=>{const photos={};for(const i of items)for(const p of i.photos||[]){const d=await pdata(p.id);if(d)photos[p.id]=d}saveFile("durée-de-vie.json",JSON.stringify({v:2,items,cats:custom,photos}),"application/json")};
 $("#imp").onclick=()=>$("#file").click();
 $("#file").onchange=async e=>{
- try{const a=JSON.parse(await e.target.files[0].text());
+ try{let a=JSON.parse(await e.target.files[0].text()),ph={};
+  if(!Array.isArray(a)){Object.entries(a.cats||{}).forEach(([k,v])=>{if(!CATS[k])custom[k]=v});saveCats();ph=a.photos||{};a=a.items}
   if(!Array.isArray(a))throw 0;
-  const ids=new Set(items.map(i=>i.id));a.forEach(i=>{if(i.name&&i.date&&!ids.has(i.id)){i.id=i.id||"i"+Math.random().toString(36).slice(2);items.push(i)}});
+  const ids=new Set(items.map(i=>i.id));
+  for(const i of a){if(i.name&&i.date&&!ids.has(i.id)){i.id=i.id||"i"+Math.random().toString(36).slice(2);for(const p of i.photos||[])if(ph[p.id]){await pput(p.id,ph[p.id]);cache.set(p.id,ph[p.id])}items.push(i)}}
   save();render()}catch(x){alert("Fichier invalide")}
  e.target.value="";
 };
