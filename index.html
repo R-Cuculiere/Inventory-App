@@ -3,14 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Durée de vie</title>
+<title>Inventory</title>
+<!--PWA-->
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#2f6f5e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Durée de vie">
+<meta name="apple-mobile-web-app-title" content="Inventory">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon-192.png">
+<!--/PWA-->
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 --bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#76736b;--line:#e6e3dc;--acc:#2f6f5e;--accbg:#e1efe9;--warn:#b45309;--warnbg:#fdf0dc;--bad:#b3261e;--badbg:#fbe4e2}
@@ -19,6 +21,7 @@
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:90px}
+body.lock{position:fixed;left:0;right:0;overflow:hidden}
 .wrap{max-width:640px;margin:0 auto;padding:14px}
 h1{font-size:22px;margin:4px 0 12px;display:flex;justify-content:space-between;align-items:center}
 h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:20px 0 8px}
@@ -31,9 +34,8 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)
 .name{font-weight:600}.sub{font-size:12.5px;color:var(--mut)}
 .bar{height:6px;border-radius:3px;background:var(--line);margin-top:10px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--acc)}
-.bar i.w{background:var(--warn)}.bar i.b{background:var(--bad)}
 .tag{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:99px;background:var(--accbg);color:var(--acc);margin:6px 4px 0 0}
-.tag.w{background:var(--warnbg);color:var(--warn)}.tag.b{background:var(--badbg);color:var(--bad)}.tag.m{background:var(--line);color:var(--mut)}
+.tag.w{background:var(--warnbg);color:var(--warn)}.tag.m{background:var(--line);color:var(--mut)}
 .tools{display:flex;gap:8px;margin:12px 0}
 input,select,textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:42px}
 textarea{min-height:64px}
@@ -44,10 +46,11 @@ button.p{background:var(--acc);color:#fff}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) button.p{color:#10211b}}
 button.d{background:var(--badbg);color:var(--bad)}
 .fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;font-size:28px;padding:0;box-shadow:0 4px 14px rgba(0,0,0,.25)}
-#sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:5}
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:5;overscroll-behavior:contain}
 #sheet.on{display:flex}
-.panel{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.panel{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:20px 20px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 .acts{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}.acts button{flex:1}
+.panel>.acts:last-child{position:sticky;bottom:0;background:var(--bg);padding:12px 0 2px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:12px;font-size:13.5px}
 .empty{text-align:center;color:var(--mut);padding:30px 10px}
 .ph{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
@@ -58,11 +61,15 @@ button.d{background:var(--badbg);color:var(--bad)}
 #viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:9}
 #viewer.on{display:flex}#viewer img{max-width:100%;max-height:100%}
 .th{width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none;margin-right:10px}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:12;padding:20px}
+#dlg.on{display:flex}.dbox{background:var(--bg);border-radius:16px;padding:18px;width:100%;max-width:380px}.dbox p{margin:0 0 12px}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}summary{cursor:pointer;font-weight:600}
+a{color:var(--acc)}
 </style>
 </head>
 <body>
 <div class="wrap">
-<h1>Durée de vie <span class="sync" id="sync"></span></h1>
+<h1>Inventory <span class="sync" id="sync"></span></h1>
 <div class="grid" id="kpis"></div>
 <div id="watch"></div>
 <h2>Mes objets</h2>
@@ -70,135 +77,155 @@ button.d{background:var(--badbg);color:var(--bad)}
 <div class="tools">
 <select id="fc"></select>
 <select id="fs"><option value="actif">En service</option><option value="all">Tous</option><option value="hs">Hors service</option></select>
-<select id="so"><option value="recent">Récents</option><option value="cher">Plus chers</option><option value="mois">Coût/mois</option><option value="reste">Fin de vie proche</option></select>
+<select id="so"><option value="recent">Récents</option><option value="cher">Plus chers</option><option value="mois">Coût/mois</option><option value="age">Plus anciens</option></select>
 </div>
 <div id="list"></div>
 <h2>Mes catégories</h2><div id="catm"></div>
+<h2>Durées de référence</h2>
+<details><summary>Durées visées par type d'objet</summary><div id="refm"></div></details>
 <h2>Données</h2>
-<div class="acts"><button id="csv">Export CSV</button><button id="jsn">Sauvegarde JSON</button><button id="imp">Importer JSON</button></div>
-<input id="file" type="file" accept=".json,application/json" hidden>
+<div class="acts"><button id="io">⇅ Importer / Exporter</button></div>
+<input id="file" type="file" hidden>
 </div>
 <button class="fab p" id="add" aria-label="Ajouter">+</button>
 <div id="sheet"><div class="panel" id="panel"></div></div>
-
 <div id="viewer"></div>
+<div id="dlg"></div>
+
 <script>
-const BASE={"Électronique":["📱",4],"Électroménager":["🔌",8],"Vêtements":["👕",3],"Chaussures":["👟",3],"Sport":["🏋️",5],"Outils":["🔧",10],"Mobilier":["🛋️",10],"Vélo / véhicule":["🚲",8],"Autre":["📦",5]};
-let custom={};try{custom=JSON.parse(localStorage.getItem("dv_cats")||"{}")}catch(e){}
-let CATS={};
-function buildCats(){CATS=Object.assign({},BASE,custom)}
-buildCats();
-function saveCats(){try{localStorage.setItem("dv_cats",JSON.stringify(custom))}catch(e){}buildCats();fillFc()}
+const BASE={"Électronique":["📱"],"Électroménager":["🔌"],"Vêtements":["👕"],"Chaussures":["👟"],"Sport":["🏋️"],"Outils":["🔧"],"Mobilier":["🛋️"],"Vélo / véhicule":["🚲"],"Autre":["📦"]};
+// type : [catégorie, durée d'usage moyenne ADEME (ans), durée visée par défaut (ans), règle]
+// règle "x2" : doubler la durée d'usage (≈ -50 % d'impact, ADEME) ; "+1" : garder 1 an de plus que la moyenne (scénario ADEME)
+const REF={"Smartphone":["Électronique",2,4,"x2"],"Tablette":["Électronique",3,6,"x2"],"Ordinateur portable":["Électronique",4,8,"x2"],"Téléviseur":["Électronique",8,9,"+1"],"Lave-linge":["Électroménager",11,12,"+1"],"Sèche-linge":["Électroménager",13,14,"+1"],"Lave-vaisselle":["Électroménager",11,12,"+1"],"Réfrigérateur / congélateur":["Électroménager",11,12,"+1"]};
 const ST={actif:"En service",hs:"Hors service",vendu:"Revendu / donné"};
-let items=[],ref=null,persist="local";
+const FIELDS=["name","type","cat","brand","store","serial","date","price","warranty","life","status","endDate","notes"];
+const HEAD=["Nom","Type","Catégorie","Marque","Magasin","N° de série","Date d'achat","Prix (€)","Garantie (mois)","Durée visée (ans)","Statut","Date de fin d'usage","Notes","Âge (jours)","Coût/mois (€)","Photos"];
+let custom={},rov={},items=[];
+try{custom=JSON.parse(localStorage.getItem("dv_cats")||"{}")}catch(e){}
+try{rov=JSON.parse(localStorage.getItem("dv_ref")||"{}")}catch(e){}
+try{items=JSON.parse(localStorage.getItem("dv_items")||"[]")}catch(e){}
+let CATS={};
+const buildCats=()=>{CATS=Object.assign({},BASE,custom)};buildCats();
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const today=()=>new Date().toISOString().slice(0,10);
 const D=s=>new Date(s+"T12:00:00");
 const days=(a,b)=>Math.round((D(b)-D(a))/864e5);
-const eur=n=>(n||0).toLocaleString("fr-FR",{maximumFractionDigits:n<10?2:0})+" €";
+const fd=s=>D(s).toLocaleDateString("fr-FR");
+const eur=n=>(n||0).toLocaleString("fr-FR",{maximumFractionDigits:n<100?2:0})+" €";
 const addM=(s,m)=>{const d=D(s);d.setMonth(d.getMonth()+m);return d.toISOString().slice(0,10)};
 const dur=d=>d<60?d+" j":d<730?Math.round(d/30.44)+" mois":(d/365.25).toFixed(1).replace(".",",")+" ans";
+const uid=()=>"i"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const vis=t=>rov[t]??REF[t]?.[2];
+const ISO=/^\d{4}-\d{2}-\d{2}$/;
 
+/* ---------- dialogues intégrés (les alert/confirm natifs sont parfois bloqués) ---------- */
+function dlg(msg,o={}){return new Promise(res=>{const d=$("#dlg");
+ d.innerHTML=`<div class="dbox"><p>${esc(msg)}</p>${o.input?'<input id="dlg_i">':""}<div class="acts">${o.cancel===false?"":'<button id="dlg_n">Annuler</button>'}<button class="p" id="dlg_o">${o.ok||"OK"}</button></div></div>`;
+ d.classList.add("on");const done=v=>{d.classList.remove("on");res(v)};
+ $("#dlg_o").onclick=()=>done(o.input?$("#dlg_i").value:true);
+ if(o.cancel!==false)$("#dlg_n").onclick=()=>done(o.input?null:false);
+ if(o.input)$("#dlg_i").focus()})}
+const say=m=>dlg(m,{cancel:false}),yes=m=>dlg(m,{ok:"Confirmer"}),askT=m=>dlg(m,{input:true});
+
+/* ---------- calculs ---------- */
 function calc(it){
  const act=it.status==="actif",end=act?today():(it.endDate||today());
  const age=Math.max(1,days(it.date,end)),price=+it.price||0;
- const r={act,age,price,perMonth:price/(age/30.44),perDay:price/age};
+ const r={act,end,age,price,perMonth:price/(age/30.44),perDay:price/age};
  if(+it.life>0){r.total=Math.round(it.life*365.25);r.pct=age/r.total;r.left=r.total-age}
  if(+it.warranty>0){r.wEnd=addM(it.date,+it.warranty);r.wLeft=days(today(),r.wEnd)}
  return r;
 }
-function save(){
- try{localStorage.setItem("dv_items",JSON.stringify(items))}catch(e){}
- }
-function setSync(t){$("#sync").textContent=t}
+function save(){try{localStorage.setItem("dv_items",JSON.stringify(items))}catch(e){}}
+function saveCats(){try{localStorage.setItem("dv_cats",JSON.stringify(custom))}catch(e){}buildCats();fillFc()}
+function fillFc(){const v=$("#fc").value||"all";$("#fc").innerHTML='<option value="all">Toutes catégories</option>'+Object.keys(CATS).map(k=>`<option>${esc(k)}</option>`).join("");$("#fc").value=Object.keys(CATS).includes(v)?v:"all"}
+function avgLife(){const d=items.filter(i=>i.status!=="actif"&&i.endDate).map(i=>days(i.date,i.endDate));return d.length?dur(d.reduce((a,b)=>a+b,0)/d.length):"–"}
 
+/* ---------- affichage ---------- */
 function render(){
  const act=items.filter(i=>i.status==="actif"),cs=act.map(calc);
- const spent=items.reduce((s,i)=>s+(+i.price||0),0);
- const pm=cs.reduce((s,c)=>s+c.perMonth,0);
- $("#kpis").innerHTML=`<div class="kpi"><b>${act.length}</b><span>objets en service</span></div><div class="kpi"><b>${eur(spent)}</b><span>dépensé au total</span></div><div class="kpi"><b>${eur(pm)}</b><span>coût / mois (en service)</span></div><div class="kpi"><b>${avgLife()}</b><span>durée de vie réelle moyenne</span></div>`;
+ $("#kpis").innerHTML=`<div class="kpi"><b>${act.length}</b><span>objets en service</span></div><div class="kpi"><b>${eur(items.reduce((s,i)=>s+(+i.price||0),0))}</b><span>dépensé au total</span></div><div class="kpi"><b>${eur(cs.reduce((s,c)=>s+c.perMonth,0))}</b><span>coût / mois (en service)</span></div><div class="kpi"><b>${avgLife()}</b><span>durée d'usage réelle moyenne</span></div>`;
  const w=[];
- act.forEach(i=>{const c=calc(i);
-  if(c.wLeft!==undefined&&c.wLeft>=0&&c.wLeft<=60)w.push([c.wLeft,`🛡️ <b>${esc(i.name)}</b> : garantie finit dans ${c.wLeft} j`]);
-  if(c.left!==undefined&&c.pct>=.85)w.push([c.left,`⏳ <b>${esc(i.name)}</b> : ${c.left>0?"fin de vie estimée dans "+dur(c.left):"durée de vie dépassée"}`])});
+ act.forEach(i=>{const c=calc(i);if(c.wLeft!==undefined&&c.wLeft>=0&&c.wLeft<=60)w.push([c.wLeft,`🛡️ <b>${esc(i.name)}</b> : fin de garantie dans ${c.wLeft} j`])});
  w.sort((a,b)=>a[0]-b[0]);
- $("#watch").innerHTML=w.length?`<h2>À surveiller</h2>`+w.slice(0,6).map(x=>`<div class="stat" style="margin-top:6px">${x[1]}</div>`).join(""):"";
- const q=$("#q").value.toLowerCase(),fc=$("#fc").value,fs=$("#fs").value;
- let l=items.filter(i=>(fc==="all"||i.cat===fc)&&(fs==="all"||(fs==="actif"?i.status==="actif":i.status!=="actif"))&&(!q||[i.name,i.brand,i.store,i.notes].join(" ").toLowerCase().includes(q)));
- const so=$("#so").value;
+ $("#watch").innerHTML=w.length?`<h2>Garanties à surveiller</h2>`+w.slice(0,6).map(x=>`<div class="stat" style="margin-top:6px">${x[1]}</div>`).join(""):"";
+ const q=$("#q").value.toLowerCase(),fc=$("#fc").value,fs=$("#fs").value,so=$("#so").value;
+ const l=items.filter(i=>(fc==="all"||i.cat===fc)&&(fs==="all"||(fs==="actif"?i.status==="actif":i.status!=="actif"))&&(!q||[i.name,i.type,i.brand,i.store,i.notes].join(" ").toLowerCase().includes(q)));
  l.sort((a,b)=>{const x=calc(a),y=calc(b);
-  if(so==="cher")return y.price-x.price;if(so==="mois")return y.perMonth-x.perMonth;
-  if(so==="reste")return (x.pct??-1)<(y.pct??-1)?1:-1;return b.date.localeCompare(a.date)});
+  if(so==="cher")return y.price-x.price;if(so==="mois")return y.perMonth-x.perMonth;if(so==="age")return y.age-x.age;return b.date.localeCompare(a.date)});
  $("#list").innerHTML=l.length?l.map(card).join(""):`<div class="empty">${items.length?"Aucun résultat":"Aucun objet pour l'instant.<br>Appuie sur + pour ajouter ton premier achat."}</div>`;
  document.querySelectorAll(".card").forEach(e=>e.onclick=()=>edit(e.dataset.id));
  document.querySelectorAll("img.th").forEach(async im=>{im.src=(await pdata(im.dataset.id))||""});
  drawCats();
 }
-function avgLife(){
- const d=items.filter(i=>i.status!=="actif"&&i.endDate).map(i=>days(i.date,i.endDate));
- return d.length?dur(d.reduce((a,b)=>a+b,0)/d.length):"–";
-}
 function card(i){
  const c=calc(i),e=(CATS[i.cat]||["📦"])[0];
  const pp=(i.photos||[]).find(p=>p.k==="Produit")||(i.photos||[])[0],th=pp?`<img class="th" data-id="${pp.id}" alt="">`:"";
- const cls=c.pct>=1?"b":c.pct>=.85?"w":"";
  let t=`<span class="tag m">${i.status==="actif"?dur(c.age):ST[i.status]+" · "+dur(c.age)}</span>`;
  if((i.photos||[]).length)t+=`<span class="tag m">📷 ${i.photos.length}</span>`;
  if(c.price)t+=`<span class="tag">${eur(c.perMonth)}/mois</span>`;
+ if(c.act&&c.pct>=1)t+=`<span class="tag">🌱 Durée visée atteinte</span>`;
  if(c.wLeft!==undefined&&c.act)t+=c.wLeft>=0?`<span class="tag ${c.wLeft<=60?"w":""}">Garantie ${c.wLeft<=60?c.wLeft+" j":"OK"}</span>`:`<span class="tag m">Garantie expirée</span>`;
- return `<div class="card" data-id="${i.id}"><div class="row">${th}<div style="flex:1"><div class="name">${e} ${esc(i.name)}</div><div class="sub">${esc([i.brand,i.store,new Date(i.date).toLocaleDateString("fr-FR")].filter(Boolean).join(" · "))}</div></div><div class="name">${c.price?eur(c.price):""}</div></div>${t}${c.pct!==undefined&&c.act?`<div class="bar"><i class="${cls}" style="width:${Math.min(100,c.pct*100)}%"></i></div>`:""}</div>`;
+ return `<div class="card" data-id="${esc(i.id)}"><div class="row">${th}<div style="flex:1"><div class="name">${e} ${esc(i.name)}</div><div class="sub">${esc([i.type,i.brand,i.store,fd(i.date)].filter(Boolean).join(" · "))}</div></div><div class="name">${c.price?eur(c.price):""}</div></div>${t}${c.pct!==undefined&&c.act?`<div class="bar"><i style="width:${Math.min(100,c.pct*100)}%"></i></div>`:""}</div>`;
 }
+
+/* ---------- fiche ---------- */
+let sy=0;
+function lock(){if(document.body.classList.contains("lock"))return;sy=window.scrollY;document.body.style.top=-sy+"px";document.body.classList.add("lock")}
+function unlock(){if(!document.body.classList.contains("lock"))return;document.body.classList.remove("lock");document.body.style.top="";window.scrollTo(0,sy)}
+function openSheet(){$("#sheet").classList.add("on");$("#panel").scrollTop=0;lock()}
+function close(){if(curP){curP.added.forEach(pdel);curP=null}$("#sheet").classList.remove("on");unlock()}
 function edit(id){
- const n=!id,it=n?{id:"i"+Date.now(),name:"",cat:"Électronique",date:today(),price:"",life:4,warranty:24,status:"actif"}:items.find(x=>x.id===id);
+ const n=!id,it=n?{id:uid(),name:"",type:"",cat:"Électronique",date:today(),price:"",life:"",warranty:24,status:"actif"}:items.find(x=>x.id===id);
+ if(!it)return;
  const c=n?null:calc(it);
  const f=(k,lab,type="text",extra="")=>`<label>${lab}</label><input id="f_${k}" type="${type}" value="${esc(it[k]??"")}" ${extra}>`;
+ const per=c?(c.act?"aujourd'hui":(it.endDate?"date de fin d'usage":"aujourd'hui, la date de fin d'usage est manquante")):"";
  $("#panel").innerHTML=`<h1>${n?"Nouvel achat":"Détails"}</h1>${f("name","Nom *","text",'placeholder="ex. Aspirateur Dyson V11"')}
+ <label>Type d'objet (optionnel)</label><input id="f_type" list="tl" value="${esc(it.type||"")}" placeholder="ex. Smartphone, T-shirt…"><datalist id="tl">${Object.keys(REF).map(t=>`<option value="${esc(t)}">`).join("")}</datalist><div class="sub" id="tnote"></div>
  <div class="two"><div><label>Catégorie</label><select id="f_cat">${Object.keys(CATS).map(k=>`<option ${k===it.cat?"selected":""}>${esc(k)}</option>`).join("")}<option value="__new">＋ Nouvelle catégorie…</option></select></div><div>${f("price","Prix (€)","number",'step="0.01" inputmode="decimal"')}</div></div>
  <div class="two"><div>${f("date","Date d'achat","date")}</div><div>${f("store","Magasin / site")}</div></div>
  <div class="two"><div>${f("brand","Marque / modèle")}</div><div>${f("serial","N° de série")}</div></div>
- <div class="two"><div>${f("life","Durée de vie visée (ans)","number",'step="0.5" inputmode="decimal"')}</div><div>${f("warranty","Garantie (mois)","number",'inputmode="numeric"')}</div></div>
+ <div class="two"><div>${f("life","Durée visée (ans)","number",'step="0.5" inputmode="decimal"')}</div><div>${f("warranty","Garantie (mois)","number",'inputmode="numeric"')}</div></div>
  <label>Statut</label><select id="f_status">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${k===it.status?"selected":""}>${v}</option>`).join("")}</select>
  <div id="endw" style="display:${it.status==="actif"?"none":"block"}">${f("endDate","Date de fin d'usage","date")}</div>
  <label>Photos (ticket, produit…)</label><div class="two"><select id="f_pk"><option>Produit</option><option>Ticket</option><option>Garantie</option><option>Autre</option></select><button type="button" id="padd">📷 Ajouter</button></div><input id="pfile" type="file" accept="image/*" multiple hidden><div class="ph" id="ph"></div>
  <label>Notes (réparations, raison du remplacement…)</label><textarea id="f_notes">${esc(it.notes||"")}</textarea>
- ${c?`<div class="stat">Âge : <b>${dur(c.age)}</b>${c.price?` · ${eur(c.perDay)}/jour · ${eur(c.perMonth)}/mois`:""}${c.total?`<br>Vie estimée : ${dur(c.total)} · ${c.left>0?"reste "+dur(c.left):"dépassée de "+dur(-c.left)}`:""}${c.wEnd?`<br>Garantie jusqu'au ${new Date(c.wEnd).toLocaleDateString("fr-FR")}`:""}</div>`:""}
+ ${c?`<div class="stat"><b>${dur(c.age)}</b> d'usage${c.price?` · ${eur(c.perDay)}/jour · <b>${eur(c.perMonth)}/mois</b>`:""}<div class="sub">Calcul sur ${c.age} j, du ${fd(it.date)} au ${fd(c.end)} (${per}).</div>${c.total?`<div style="margin-top:6px">Durée visée : ${dur(c.total)} · ${c.left>0?"reste "+dur(c.left):"🌱 dépassée de "+dur(-c.left)+" : chaque année en plus réduit l'impact"}</div>`:""}${c.wEnd?`<div>Garantie jusqu'au ${fd(c.wEnd)}</div>`:""}</div>`:""}
  <div class="acts"><button id="cancel">Annuler</button>${n?"":'<button class="d" id="del">Supprimer</button>'}<button class="p" id="ok">Enregistrer</button></div>`;
- $("#sheet").classList.add("on");
- const cat=$("#f_cat");
-
- let prev=cat.value;
- cat.onchange=()=>{
-  if(cat.value==="__new"){const r=newCat();if(r){if(![...cat.options].some(o=>o.value===r))cat.insertBefore(new Option(r,r),cat.querySelector('[value="__new"]'));cat.value=r}else cat.value=prev}
-  prev=cat.value;if(n&&CATS[cat.value])$("#f_life").value=CATS[cat.value][1];
- };
+ openSheet();
+ const cat=$("#f_cat");let prev=cat.value;
+ cat.onchange=async()=>{
+  if(cat.value==="__new"){const r=await newCat();if(r){if(![...cat.options].some(o=>o.value===r))cat.insertBefore(new Option(r,r),cat.querySelector('[value="__new"]'));cat.value=r}else cat.value=prev}
+  prev=cat.value};
+ const tn=()=>{const t=$("#f_type").value.trim(),r=REF[t];$("#tnote").textContent=r?`Moyenne ADEME : ${r[1]} ans · durée visée : ${vis(t)} ans`:""};
+ $("#f_type").onchange=()=>{const t=$("#f_type").value.trim(),r=REF[t];if(r){if(CATS[r[0]]){$("#f_cat").value=r[0];prev=r[0]}$("#f_life").value=vis(t)}tn()};tn();
+ $("#f_status").onchange=e=>{$("#endw").style.display=e.target.value==="actif"?"none":"block";if(e.target.value!=="actif"&&!$("#f_endDate").value)$("#f_endDate").value=today()};
  const P={list:[...(it.photos||[])],added:[],removed:[]};curP=P;drawPhotos();
  $("#padd").onclick=()=>$("#pfile").click();
- $("#pfile").onchange=async e=>{for(const f of e.target.files){try{const id="p"+Date.now()+Math.random().toString(36).slice(2,6),d=await shrink(f);await pput(id,d);cache.set(id,d);P.list.push({id,k:$("#f_pk").value});P.added.push(id)}catch(x){alert("Photo illisible ou stockage plein")}}e.target.value="";drawPhotos()};
- $("#f_status").onchange=e=>{$("#endw").style.display=e.target.value==="actif"?"none":"block";if(e.target.value!=="actif"&&!$("#f_endDate").value)$("#f_endDate").value=today()};
+ $("#pfile").onchange=async e=>{for(const f of e.target.files){try{const pid="p"+Date.now()+Math.random().toString(36).slice(2,6),d=await shrink(f);await pput(pid,d);cache.set(pid,d);P.list.push({id:pid,k:$("#f_pk").value});P.added.push(pid)}catch(x){say("Photo illisible ou stockage plein")}}e.target.value="";drawPhotos()};
  $("#cancel").onclick=close;
- if(!n)$("#del").onclick=()=>{if(confirm("Supprimer cet objet ?")){(it.photos||[]).forEach(p=>pdel(p.id));items=items.filter(x=>x.id!==id);save();close();render()}};
+ if(!n)$("#del").onclick=async()=>{if(await yes("Supprimer cet objet ?")){(it.photos||[]).forEach(p=>pdel(p.id));items=items.filter(x=>x.id!==id);save();close();render()}};
  $("#ok").onclick=()=>{
   const g=k=>$("#f_"+k)?.value.trim()??"";
-  if(!g("name")||!g("date")){alert("Nom et date d'achat requis");return}
-  Object.assign(it,{name:g("name"),cat:g("cat"),price:g("price"),date:g("date"),store:g("store"),brand:g("brand"),serial:g("serial"),life:g("life"),warranty:g("warranty"),status:g("status"),endDate:g("status")==="actif"?"":g("endDate"),notes:g("notes"),photos:P.list});
+  if(!g("name")||!g("date")){say("Nom et date d'achat requis");return}
+  const st=g("status");
+  Object.assign(it,{name:g("name"),type:g("type"),cat:g("cat"),price:g("price"),date:g("date"),store:g("store"),brand:g("brand"),serial:g("serial"),life:g("life"),warranty:g("warranty"),status:st,endDate:st==="actif"?"":(g("endDate")||today()),notes:g("notes"),photos:P.list});
   if(n)items.push(it);P.removed.forEach(pdel);curP=null;save();close();render();
  };
 }
-function close(){if(curP){curP.added.forEach(pdel);curP=null}$("#sheet").classList.remove("on")}
 $("#sheet").onclick=e=>{if(e.target.id==="sheet")close()};
 $("#add").onclick=()=>edit();
 ["q","fc","fs","so"].forEach(k=>$("#"+k).oninput=render);
-function fillFc(){const v=$("#fc").value||"all";$("#fc").innerHTML='<option value="all">Toutes catégories</option>'+Object.keys(CATS).map(k=>`<option>${esc(k)}</option>`).join("");$("#fc").value=Object.keys(CATS).includes(v)?v:"all"}
-fillFc();
 
-let curP=null;const cache=new Map();
-let _db;
+/* ---------- photos (IndexedDB) ---------- */
+let curP=null;const cache=new Map();let _db;
 function idb(){return _db||(_db=new Promise((res,rej)=>{const r=indexedDB.open("dv",1);r.onupgradeneeded=()=>r.result.createObjectStore("p");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))}
 async function pput(id,v){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction("p","readwrite");t.objectStore("p").put(v,id);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
 async function pget(id){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction("p").objectStore("p").get(id);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
 async function pdel(id){cache.delete(id);try{const d=await idb();d.transaction("p","readwrite").objectStore("p").delete(id)}catch(e){}}
-async function pdata(id){if(!cache.has(id))cache.set(id,await pget(id));return cache.get(id)}
+async function pdata(id){if(!cache.has(id)){try{cache.set(id,await pget(id))}catch(e){return ""}}return cache.get(id)}
 function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const s=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL("image/jpeg",.8))};im.onerror=rej;im.src=u})}
 function drawPhotos(){
  const h=$("#ph");if(!h||!curP)return;
@@ -208,46 +235,112 @@ function drawPhotos(){
 }
 function view(src){if(!src)return;$("#viewer").innerHTML=`<img src="${src}" alt="">`;$("#viewer").classList.add("on")}
 $("#viewer").onclick=()=>$("#viewer").classList.remove("on");
-function newCat(){
- const t=(prompt("Nom de la nouvelle catégorie (tu peux commencer par un emoji, ex. 🎮 Jeux vidéo)")||"").trim();
+
+/* ---------- catégories & durées de référence ---------- */
+async function newCat(){
+ const t=((await askT("Nom de la nouvelle catégorie (tu peux commencer par un emoji, ex. 🎮 Jeux vidéo)"))||"").trim();
  if(!t)return null;
  const m=t.match(/^(\p{Extended_Pictographic}\uFE0F?)\s*(.+)$/u),emo=m?m[1]:"🏷️",name=(m?m[2]:t).trim();
- if(CATS[name])return name;
- const y=parseFloat((prompt("Durée de vie habituelle en années ?","5")||"5").replace(",","."));
- custom[name]=[emo,y>0?y:5];saveCats();return name;
+ if(!CATS[name]){custom[name]=[emo];saveCats()}return name;
 }
 function drawCats(){
  const c=Object.entries(custom);
  $("#catm").innerHTML=(c.length?c.map(([k,v])=>`<span class="tag">${v[0]} ${esc(k)} <a data-dc="${esc(k)}" style="cursor:pointer">✕</a></span>`).join(""):'<span class="sub">Aucune catégorie personnalisée.</span>')+'<div class="acts"><button id="nc">＋ Nouvelle catégorie</button></div>';
- $("#nc").onclick=()=>{if(newCat())render()};
- $("#catm").querySelectorAll("[data-dc]").forEach(a=>a.onclick=()=>{const k=a.dataset.dc;if(items.some(i=>i.cat===k)){alert("Des objets utilisent cette catégorie : change-les d'abord.");return}if(confirm("Supprimer la catégorie « "+k+" » ?")){delete custom[k];saveCats();render()}});
+ $("#nc").onclick=async()=>{if(await newCat())render()};
+ $("#catm").querySelectorAll("[data-dc]").forEach(a=>a.onclick=async()=>{const k=a.dataset.dc;if(items.some(i=>i.cat===k)){say("Des objets utilisent cette catégorie : change-les d'abord.");return}if(await yes("Supprimer la catégorie « "+k+" » ?")){delete custom[k];saveCats();render()}});
 }
+function drawRef(){
+ $("#refm").innerHTML=Object.entries(REF).map(([t,r])=>`<div class="stat" style="margin-top:8px"><div class="row"><b>${esc(t)}</b><span class="sub">moyenne ADEME : ${r[1]} ans</span></div><div class="two" style="align-items:center;margin-top:6px"><span class="sub">${r[3]==="x2"?"Par défaut : 2 × la moyenne":"Par défaut : moyenne + 1 an"}</span><input data-rt="${esc(t)}" type="number" step="0.5" inputmode="decimal" value="${vis(t)}"></div></div>`).join("")+
+ '<p class="sub">Sources : durées d\'usage moyennes issues de l\'étude ADEME (reprises par ecoconso.be). Doubler la durée d\'usage d\'un smartphone, d\'une tablette ou d\'un ordinateur améliore son bilan environnemental d\'environ 50 % (ADEME) ; pour les gros équipements, l\'ADEME évalue le scénario « garder 1 an de plus ». Il n\'existe pas de durée officielle pour les vêtements, chaussures ou accessoires : saisis la tienne dans la fiche. Modifier une valeur ne change que les futurs objets.</p>';
+ $("#refm").querySelectorAll("[data-rt]").forEach(i=>i.onchange=()=>{const v=parseFloat(i.value);if(v>0)rov[i.dataset.rt]=v;else delete rov[i.dataset.rt];try{localStorage.setItem("dv_ref",JSON.stringify(rov))}catch(e){}drawRef()});
+}
+
+/* ---------- import / export ---------- */
 async function saveFile(name,data,mime){
+ try{const d=await claude.use("downloads");if(d){await d.save({filename:name,data});return}}catch(e){}
  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:mime}));a.download=name;a.click();
 }
-$("#csv").onclick=()=>{
- const h=["Nom","Catégorie","Marque","Magasin","Date achat","Prix","Garantie (mois)","Durée de vie visée (ans)","Statut","Date fin","Âge (jours)","Coût/mois","Notes","Photos"];
- const rows=items.map(i=>{const c=calc(i);return [i.name,i.cat,i.brand,i.store,i.date,i.price,i.warranty,i.life,ST[i.status],i.endDate,c.age,c.price?c.perMonth.toFixed(2):"",i.notes,(i.photos||[]).length]});
- const csv="\ufeff"+[h,...rows].map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\n");
- saveFile("durée-de-vie.csv",csv,"text/csv");
-};
-$("#jsn").onclick=async()=>{const photos={};for(const i of items)for(const p of i.photos||[]){const d=await pdata(p.id);if(d)photos[p.id]=d}saveFile("durée-de-vie.json",JSON.stringify({v:2,items,cats:custom,photos}),"application/json")};
-$("#imp").onclick=()=>$("#file").click();
-$("#file").onchange=async e=>{
- try{let a=JSON.parse(await e.target.files[0].text()),ph={};
-  if(!Array.isArray(a)){Object.entries(a.cats||{}).forEach(([k,v])=>{if(!CATS[k])custom[k]=v});saveCats();ph=a.photos||{};a=a.items}
-  if(!Array.isArray(a))throw 0;
-  const ids=new Set(items.map(i=>i.id));
-  for(const i of a){if(i.name&&i.date&&!ids.has(i.id)){i.id=i.id||"i"+Math.random().toString(36).slice(2);for(const p of i.photos||[])if(ph[p.id]){await pput(p.id,ph[p.id]);cache.set(p.id,ph[p.id])}items.push(i)}}
-  save();render()}catch(x){alert("Fichier invalide")}
- e.target.value="";
-};
+const rowsOf=dec=>{const n=v=>v===""||v==null?"":String(v).replace(".",dec);return items.map(i=>{const c=calc(i);return [i.name,i.type,i.cat,i.brand,i.store,i.serial,i.date,n(i.price),i.warranty,i.life,ST[i.status],i.endDate,i.notes,c.age,c.price?n(c.perMonth.toFixed(2)):"",(i.photos||[]).length]})};
+const csvText=()=>"\ufeff"+[HEAD,...rowsOf(",")].map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(";")).join("\n");
+const tsvText=()=>[HEAD,...rowsOf(",")].map(r=>r.map(v=>{v=String(v??"");return /[\t\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join("\t")).join("\n");
+async function jsonText(){const photos={};for(const i of items)for(const p of i.photos||[]){const d=await pdata(p.id);if(d)photos[p.id]=d}return JSON.stringify({v:2,items,cats:custom,photos})}
+function parseCSV(t){
+ t=t.replace(/^\ufeff/,"");const l=t.split(/\r?\n/)[0],d=(l.match(/;/g)||[]).length>=(l.match(/,/g)||[]).length?";":",";
+ const out=[];let r=[],f="",q=false;
+ for(let k=0;k<t.length;k++){const c=t[k];
+  if(q){if(c==='"'){if(t[k+1]==='"'){f+='"';k++}else q=false}else f+=c}
+  else if(c==='"')q=true;else if(c===d){r.push(f);f=""}
+  else if(c==="\n"||c==="\r"){if(c==="\r"&&t[k+1]==="\n")k++;r.push(f);out.push(r);r=[];f=""}else f+=c}
+ if(f!==""||r.length){r.push(f);out.push(r)}return out}
+function fromCSV(R){
+ const H=R[0].map(x=>x.trim().toLowerCase()),ix=n=>H.indexOf(n);
+ const map={name:"nom",type:"type",cat:"catégorie",brand:"marque",store:"magasin",serial:"n° de série",date:"date d'achat",price:"prix (€)",warranty:"garantie (mois)",life:"durée visée (ans)",status:"statut",endDate:"date de fin d'usage",notes:"notes"};
+ if(ix("nom")<0||ix("date d'achat")<0)throw 0;
+ const rev=Object.fromEntries(Object.entries(ST).map(([k,v])=>[v.toLowerCase(),k]));
+ const nd=s=>{const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);return m?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:s};
+ const nn=s=>s.replace(/\s/g,"").replace(",",".");
+ const out=[];
+ for(const r of R.slice(1)){
+  if(!r.some(x=>x.trim()))continue;
+  const i={};
+  for(const [k,h] of Object.entries(map)){const j=ix(h);if(j<0)continue;let v=(r[j]||"").trim();
+   if(k==="date"||k==="endDate")v=nd(v);else if(k==="price"||k==="warranty"||k==="life")v=nn(v);else if(k==="status")v=rev[v.toLowerCase()]||"actif";
+   i[k]=v}
+  if(!i.name||!ISO.test(i.date))continue;
+  if(i.cat&&!CATS[i.cat])custom[i.cat]=["🏷️"];
+  out.push(i)}
+ return out}
+async function merge(list,ph){
+ const key=i=>(i.name||"").trim().toLowerCase()+"|"+i.date,map=new Map(items.map(i=>[key(i),i])),add=[],upd=[];
+ list.forEach(i=>{const e=map.get(key(i));e?upd.push([e,i]):add.push(i)});
+ if(!add.length&&!upd.length){say("Aucun objet valide à importer.");return}
+ if(!await yes(`${add.length} objet(s) à ajouter et ${upd.length} à mettre à jour (même nom et même date d'achat). Continuer ?`))return;
+ for(const [e,i] of upd)for(const k of FIELDS)if(i[k]!==undefined)e[k]=i[k];
+ const ids=new Set(items.map(x=>x.id));
+ for(const i of add){
+  const o=Object.assign({type:"",cat:"Autre",price:"",store:"",brand:"",serial:"",life:"",warranty:"",status:"actif",endDate:"",notes:""},i);
+  if(!o.id||ids.has(o.id))o.id=uid();ids.add(o.id);
+  o.photos=(i.photos||[]).filter(p=>ph[p.id]);for(const p of o.photos){await pput(p.id,ph[p.id]);cache.set(p.id,ph[p.id])}
+  items.push(o)}
+ saveCats();save();close();render();say(`${add.length} ajouté(s), ${upd.length} mis à jour.`);
+}
+async function importText(t,csv){
+ let list,ph={};
+ try{
+  if(csv)list=fromCSV(parseCSV(t));
+  else{let a=JSON.parse(t);if(!Array.isArray(a)){Object.entries(a.cats||{}).forEach(([k,v])=>{if(!CATS[k])custom[k]=v});ph=a.photos||{};a=a.items}if(!Array.isArray(a))throw 0;list=a.filter(i=>i&&i.name&&ISO.test(i.date||""))}
+ }catch(x){say("Fichier invalide ou illisible.");return}
+ buildCats();await merge(list,ph);
+}
+function openIO(){
+ $("#panel").innerHTML=`<h1>Importer / exporter</h1>
+ <label>Format</label><select id="io_f"><option value="csv">CSV (sans photos, lisible dans Excel / Sheets)</option><option value="json">JSON (sauvegarde complète avec photos)</option></select>
+ <div class="acts"><button class="p" id="io_x">Exporter</button><button id="io_i">Importer un fichier</button></div>
+ <details style="margin-top:12px"><summary>Importer en collant le texte</summary><textarea id="io_p" placeholder="Colle ici le contenu d'un fichier CSV ou JSON"></textarea><div class="acts"><button id="io_pb">Importer le texte collé</button></div></details>
+ <h2>Google Sheets</h2>
+ <div class="sub">Copie tout le tableau, puis colle-le en A1 d'un Sheet (réglé sur la France pour les virgules décimales).</div>
+ <div class="acts"><button id="io_g">Copier pour Google Sheets</button><button id="io_s">Ouvrir un Sheet vierge</button></div>
+ <div class="sub" id="io_m" style="margin-top:8px"></div><textarea id="io_t" readonly hidden style="margin-top:8px"></textarea>
+ <div class="acts"><button id="io_c">Fermer</button></div>`;
+ openSheet();
+ const stamp="inventory-"+today();
+ $("#io_x").onclick=async()=>{if($("#io_f").value==="csv")saveFile(stamp+".csv",csvText(),"text/csv");else saveFile(stamp+".json",await jsonText(),"application/json")};
+ $("#io_i").onclick=()=>{$("#file").accept=$("#io_f").value==="csv"?".csv,text/csv":".json,application/json";$("#file").click()};
+ $("#io_pb").onclick=()=>{const t=$("#io_p").value.trim();if(t)importText(t,!/^[\[{]/.test(t))};
+ $("#io_g").onclick=async()=>{const t=tsvText(),ta=$("#io_t");ta.value=t;ta.hidden=false;ta.select();let ok=false;
+  try{await navigator.clipboard.writeText(t);ok=true}catch(e){try{ok=document.execCommand("copy")}catch(x){}}
+  $("#io_m").textContent=ok?"✅ Copié. Ouvre un Google Sheet et colle (Ctrl/Cmd+V) en A1.":"Copie manuelle : le texte ci-dessous est sélectionné, copie-le puis colle-le dans le Sheet."};
+ $("#io_s").onclick=()=>window.open("https://sheets.new","_blank","noopener");
+ $("#io_c").onclick=close;
+}
+$("#io").onclick=openIO;
+$("#file").onchange=async e=>{const f=e.target.files[0];if(f)await importText(await f.text(),/\.csv$/i.test(f.name));e.target.value=""};
 
-try{items=JSON.parse(localStorage.getItem("dv_items")||"[]")}catch(e){}
-render();
-setSync("stocké sur cet appareil");
-if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
-if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+/* ---------- démarrage ---------- */
+(function(){const s=new Set();let ch=false;items.forEach(i=>{if(!i.id||s.has(i.id)){i.id=uid();ch=true}s.add(i.id)});if(ch)save()})();
+fillFc();drawRef();render();
+setSync();function setSync(){$("#sync").textContent="stocké sur cet appareil"}
+/*PWA*/if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});/*/PWA*/
 </script>
 </body>
 </html>
